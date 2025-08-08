@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Has 90 profited or lost from his Polymarket bets?</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.9);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(6px);
+    }
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.8rem;
+    }
+    .status {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .gain { color: #22c55e; }
+    .loss { color: #ef4444; }
+    .amount {
+      font-size: 2.2rem;
+      margin-top: 0.5rem;
+    }
+    .loading { color: #94a3b8; }
+    .stats {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+    .stat-label {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    .bets {
+      display: grid;
+      gap: 1rem;
+    }
+    .bet {
+      background: #0f172a;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      transition: transform 0.2s ease;
+    }
+    .bet:hover {
+      transform: translateY(-3px);
+    }
+    .bet img {
+      width: 60px;
+      height: 60px;
+      border-radius: 0.5rem;
+      object-fit: cover;
+    }
+    .bet-details {
+      flex: 1;
+    }
+    .bet-title {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .bet-outcome {
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+    .bet-pnl.gain { color: #22c55e; }
+    .bet-pnl.loss { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Has 90 profited or lost from his Polymarket bets?</h1>
+      <div id="status" class="status loading">Fetching data...</div>
+      <div id="amount" class="amount"></div>
+      <div class="stats">
+        <div class="stat">
+          <div id="total-bets" class="stat-value">—</div>
+          <div class="stat-label">Total Bets</div>
+        </div>
+        <div class="stat">
+          <div id="winning-bets" class="stat-value">—</div>
+          <div class="stat-label">Winning Bets</div>
+        </div>
+        <div class="stat">
+          <div id="losing-bets" class="stat-value">—</div>
+          <div class="stat-label">Losing Bets</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Latest Bets</h2>
+      <div id="bets" class="bets">Loading bets...</div>
+    </div>
+  </div>
+
+  <script>
+    const PROFIT_API = 'https://lb-api.polymarket.com/profit?window=all&limit=1&address=0x8f346ace8c1d2e12bbaf60c89dc2030e74a8c3ba';
+    const BETS_API = 'https://data-api.polymarket.com/positions?user=0x8f346ace8c1d2e12bbaf60c89dc2030e74a8c3ba&sortBy=CURRENT&sortDirection=DESC&sizeThreshold=.1&limit=50&offset=0';
+
+    fetch(PROFIT_API)
+      .then(res => res.json())
+      .then(data => {
+        const item = data[0];
+        const amount = item.amount;
+        const amountEl = document.getElementById('amount');
+        const statusEl = document.getElementById('status');
+        if (amount > 0) {
+          statusEl.textContent = 'Yes!';
+          statusEl.classList.remove('loading');
+          statusEl.classList.add('gain');
+          amountEl.textContent = '+$' + amount.toFixed(2);
+          amountEl.classList.add('gain');
+        } else if (amount < 0) {
+          statusEl.textContent = 'No.';
+          statusEl.classList.remove('loading');
+          statusEl.classList.add('loss');
+          amountEl.textContent = '-$' + Math.abs(amount).toFixed(2);
+          amountEl.classList.add('loss');
+        } else {
+          statusEl.textContent = 'No change';
+          statusEl.classList.remove('loading');
+          amountEl.textContent = '$0.00';
+        }
+      })
+      .catch(err => {
+        document.getElementById('status').textContent = 'Error fetching data';
+        document.getElementById('status').classList.remove('loading');
+        console.error(err);
+      });
+
+    fetch(BETS_API)
+      .then(res => res.json())
+      .then(bets => {
+        const betsContainer = document.getElementById('bets');
+        betsContainer.innerHTML = '';
+        let winCount = 0, lossCount = 0;
+
+        bets.forEach(bet => {
+          if (bet.cashPnl > 0) winCount++;
+          if (bet.cashPnl < 0) lossCount++;
+
+          const betEl = document.createElement('div');
+          betEl.className = 'bet';
+
+          const img = document.createElement('img');
+          img.src = bet.icon || '';
+          img.alt = bet.title;
+
+          const details = document.createElement('div');
+          details.className = 'bet-details';
+
+          const title = document.createElement('div');
+          title.className = 'bet-title';
+          title.textContent = bet.title;
+
+          const outcome = document.createElement('div');
+          outcome.className = 'bet-outcome';
+          outcome.textContent = `Outcome: ${bet.outcome} | End Date: ${bet.endDate}`;
+
+          details.appendChild(title);
+          details.appendChild(outcome);
+
+          const pnl = document.createElement('div');
+          pnl.className = 'bet-pnl ' + (bet.cashPnl >= 0 ? 'gain' : 'loss');
+          pnl.textContent = (bet.cashPnl >= 0 ? '+' : '-') + '$' + Math.abs(bet.cashPnl).toFixed(2);
+
+          betEl.appendChild(img);
+          betEl.appendChild(details);
+          betEl.appendChild(pnl);
+
+          betsContainer.appendChild(betEl);
+        });
+
+        document.getElementById('total-bets').textContent = bets.length;
+        document.getElementById('winning-bets').textContent = winCount;
+        document.getElementById('losing-bets').textContent = lossCount;
+      })
+      .catch(err => {
+        document.getElementById('bets').textContent = 'Error fetching bets';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
